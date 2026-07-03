@@ -50,6 +50,62 @@ def clean_campaign_data():
 
     """
 
+    import glob
+    import os
+    import pandas as pd
+
+    def load_input(input_directory):
+        files = glob.glob(f"{input_directory}/*")
+        dataframes = []
+    
+        for file in files:
+            
+            df_temp = pd.read_csv(file)
+                    
+            dataframes.append(df_temp)
+
+        dataframe = pd.concat(dataframes, ignore_index=True)
+
+        return dataframe
+    
+    def save_output(dataframe, output_directory, nombre):
+        os.makedirs(output_directory, exist_ok=True)
+
+        target_file = os.path.join(output_directory, nombre)
+
+        if os.path.exists(target_file):
+            os.remove(target_file)
+
+        dataframe.to_csv(
+            target_file,
+            sep=",",
+            index=False,
+        )
+
+    df = load_input("files/input")
+
+    # Dataframe para client
+    df_client = df[["client_id", "age", "job", "marital", "education", "credit_default", "mortgage"]].copy()
+    df_client["job"] = df_client["job"].str.replace({".": "", "-": "_"})
+    df_client["education"] = df_client["education"].str.replace(".", "_")
+    df_client["education"] = df_client["education"].replace("unknown", pd.NA)
+    df_client["credit_default"] = (df_client["credit_default"] == "yes").astype(int)
+    df_client["mortgage"] = (df_client["mortgage"] == "yes").astype(int)
+
+    #Dataframe para campaign
+    df_campaign = df[["client_id", "number_contacts", "contact_duration", "previous_campaign_contacts", "previous_outcome", "campaign_outcome"]].copy()
+    df_campaign["last_contact_date"] = "2022-" + df["month"].astype(str) + "-" + df["day"].astype(str)
+    df_campaign["last_contact_date"] = pd.to_datetime(df_campaign["last_contact_date"], format="%Y-%b-%d")
+    df_campaign["previous_outcome"] = (df_campaign["previous_outcome"] == "success").astype(int)
+    df_campaign["campaign_outcome"] = (df_campaign["campaign_outcome"] == "yes").astype(int)
+
+    # Dataframe para economics
+    df_economics = df[["client_id", "cons_price_idx", "euribor_three_months"]].copy()
+    
+    save_output(df_client, "files/output", "client.csv")
+    save_output(df_campaign, "files/output", "campaign.csv")
+    save_output(df_economics, "files/output", "economics.csv")
+
     return
 
 
